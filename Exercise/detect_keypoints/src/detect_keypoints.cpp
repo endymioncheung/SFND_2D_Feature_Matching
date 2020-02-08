@@ -9,7 +9,7 @@ using namespace std;
 
 void detKeypoints1()
 {
-    // load image from file and convert to grayscale
+    // Load image from file and convert to grayscale
     cv::Mat imgGray;
     cv::Mat img = cv::imread("../images/img1.png");
     cv::cvtColor(img, imgGray, cv::COLOR_BGR2GRAY);
@@ -30,11 +30,14 @@ void detKeypoints1()
     t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
     cout << "Shi-Tomasi with n= " << corners.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
 
+    // Looping through all corners
     for (auto it = corners.begin(); it != corners.end(); ++it)
-    { // add corners to result vector
-
+    { 
+        // Add corners to result vector
         cv::KeyPoint newKeyPoint;
+        // Assigning corner to the keypoint
         newKeyPoint.pt = cv::Point2f((*it).x, (*it).y);
+        // Assigning size of the neighborhood around the key points
         newKeyPoint.size = blockSize;
         kptsShiTomasi.push_back(newKeyPoint);
     }
@@ -45,6 +48,7 @@ void detKeypoints1()
     string windowName = "Shi-Tomasi Results";
     cv::namedWindow(windowName, 1);
     imshow(windowName, visImage);
+    cv::waitKey(0);
 
     // TODO: use the OpenCV library to add the FAST detector
     // in addition to the already implemented Shi-Tomasi 
