@@ -10,7 +10,7 @@ void magnitudeSobel()
 {
     // load image from file
     cv::Mat img;
-    img = cv::imread("../images/img1gray.png");
+    img = cv::imread("../images/img1.png");
 
     // convert image to grayscale
     cv::Mat imgGray;
@@ -23,10 +23,14 @@ void magnitudeSobel()
     cv::GaussianBlur(imgGray, blurred, cv::Size(filterSize, filterSize), stdDev);
 
     // create filter kernels
-    float sobel_x[9] = {-1, 0, +1, -2, 0, +2, -1, 0, +1};
+    float sobel_x[9] = {-1, 0, +1, 
+                        -2, 0, +2, 
+                        -1, 0, +1};
     cv::Mat kernel_x = cv::Mat(3, 3, CV_32F, sobel_x);
 
-    float sobel_y[9] = {-1, -2, -1, 0, 0, 0, +1, +2, +1};
+    float sobel_y[9] = {-1, -2, -1, 
+                         0,  0,  0, 
+                        +1, +2, +1};
     cv::Mat kernel_y = cv::Mat(3, 3, CV_32F, sobel_y);
 
     // apply filter
