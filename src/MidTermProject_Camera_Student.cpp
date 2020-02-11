@@ -14,6 +14,8 @@
 #include <opencv2/xfeatures2d/nonfree.hpp>
 
 #include "dataStructures.h"
+// Camera-based processing loop such as
+// feature detection, descriptor, extraction, matching 
 #include "matching2D.hpp"
 
 using namespace std;
@@ -24,19 +26,19 @@ int main(int argc, const char *argv[])
 
     /* INIT VARIABLES AND DATA STRUCTURES */
 
-    // data location
+    // Data location
     string dataPath = "../";
 
-    // camera
+    // Camera
     string imgBasePath = dataPath + "images/";
     string imgPrefix = "KITTI/2011_09_26/image_00/data/000000"; // left camera, color
     string imgFileType = ".png";
-    int imgStartIndex = 0; // first file index to load (assumes Lidar and camera names have identical naming convention)
+    int imgStartIndex = 0; // First file index to load (assumes Lidar and camera names have identical naming convention)
     int imgEndIndex = 9;   // last file index to load
     int imgFillWidth = 4;  // no. of digits which make up the file index (e.g. img-0001.png)
 
     // misc
-    int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
+    int dataBufferSize = 2;       // No. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer; // list of data frames which are held in memory at the same time
     bool bVis = false;            // visualize results
 
@@ -46,12 +48,12 @@ int main(int argc, const char *argv[])
     {
         /* LOAD IMAGE INTO BUFFER */
 
-        // assemble filenames for current index
+        // Assemble filenames for current index
         ostringstream imgNumber;
         imgNumber << setfill('0') << setw(imgFillWidth) << imgStartIndex + imgIndex;
         string imgFullFilename = imgBasePath + imgPrefix + imgNumber.str() + imgFileType;
 
-        // load image from file and convert to grayscale
+        // Load image from file and convert to grayscale
         cv::Mat img, imgGray;
         img = cv::imread(imgFullFilename);
         cv::cvtColor(img, imgGray, cv::COLOR_BGR2GRAY);
@@ -59,7 +61,7 @@ int main(int argc, const char *argv[])
         //// STUDENT ASSIGNMENT
         //// TASK MP.1 -> replace the following code with ring buffer of size dataBufferSize
 
-        // push image into data frame buffer
+        // Push image into data frame buffer
         DataFrame frame;
         frame.cameraImg = imgGray;
         dataBuffer.push_back(frame);
@@ -69,8 +71,10 @@ int main(int argc, const char *argv[])
 
         /* DETECT IMAGE KEYPOINTS */
 
-        // extract 2D keypoints from current image
-        vector<cv::KeyPoint> keypoints; // create empty feature list for current image
+        // Extract 2D keypoints from current image
+        // Create empty feature list for current image
+        // which holds all of the keypoints detected in the image
+        vector<cv::KeyPoint> keypoints;
         string detectorType = "SHITOMASI";
 
         //// STUDENT ASSIGNMENT
@@ -90,8 +94,10 @@ int main(int argc, const char *argv[])
         //// STUDENT ASSIGNMENT
         //// TASK MP.3 -> only keep keypoints on the preceding vehicle
 
-        // only keep keypoints on the preceding vehicle
+        // Only keep keypoints on the preceding vehicle
+        // (i.e. inside the bounding rectangle)
         bool bFocusOnVehicle = true;
+        // Rectangle which always encloses the directly preceding vehicle
         cv::Rect vehicleRect(535, 180, 180, 150);
         if (bFocusOnVehicle)
         {
@@ -100,7 +106,7 @@ int main(int argc, const char *argv[])
 
         //// EOF STUDENT ASSIGNMENT
 
-        // optional : limit number of keypoints (helpful for debugging and learning)
+        // Optional : limit number of keypoints (helpful for debugging and learning)
         bool bLimitKpts = false;
         if (bLimitKpts)
         {
@@ -114,7 +120,7 @@ int main(int argc, const char *argv[])
             cout << " NOTE: Keypoints have been limited!" << endl;
         }
 
-        // push keypoints and descriptor for current frame to end of data buffer
+        // Push keypoints and descriptor for current frame to end of data buffer
         (dataBuffer.end() - 1)->keypoints = keypoints;
         cout << "#2 : DETECT KEYPOINTS done" << endl;
 
@@ -129,16 +135,20 @@ int main(int argc, const char *argv[])
         descKeypoints((dataBuffer.end() - 1)->keypoints, (dataBuffer.end() - 1)->cameraImg, descriptors, descriptorType);
         //// EOF STUDENT ASSIGNMENT
 
-        // push descriptors for current frame to end of data buffer
+        // Push descriptors for current frame to end of data buffer
         (dataBuffer.end() - 1)->descriptors = descriptors;
 
         cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
 
-        if (dataBuffer.size() > 1) // wait until at least two images have been processed
+        // Wait until at least two images have been processed
+        // only entered once the data buffer size exceeds a single element
+        // because we want to match keypoints of TWO images, one image won't work
+        // for keypoint matching
+        if (dataBuffer.size() > 1)
         {
 
             /* MATCH KEYPOINT DESCRIPTORS */
-
+            // Create vector to store the descriptors match results
             vector<cv::DMatch> matches;
             string matcherType = "MAT_BF";        // MAT_BF, MAT_FLANN
             string descriptorType = "DES_BINARY"; // DES_BINARY, DES_HOG
@@ -154,12 +164,12 @@ int main(int argc, const char *argv[])
 
             //// EOF STUDENT ASSIGNMENT
 
-            // store matches in current data frame
+            // Store matches in current data frame
             (dataBuffer.end() - 1)->kptMatches = matches;
 
             cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
 
-            // visualize matches between current and previous image
+            // Visualize matches between current and previous image
             bVis = true;
             if (bVis)
             {
@@ -179,7 +189,7 @@ int main(int argc, const char *argv[])
             bVis = false;
         }
 
-    } // eof loop over all images
+    } // EOF loop over all images
 
     return 0;
 }
