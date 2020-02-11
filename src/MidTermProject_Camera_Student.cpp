@@ -60,11 +60,21 @@ int main(int argc, const char *argv[])
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.1 -> replace the following code with ring buffer of size dataBufferSize
-
-        // Push image into data frame buffer
         DataFrame frame;
         frame.cameraImg = imgGray;
-        dataBuffer.push_back(frame);
+        
+        if (dataBuffer.size() <  dataBufferSize)
+        {
+            // Push image into data frame buffer
+            // when ring buffer is not full yet
+            dataBuffer.push_back(frame);
+        } else {
+            // Remove the oldest data frame
+            // when ring buffer is full
+            dataBuffer.erase(dataBuffer.begin());
+            /// Insert image into data frame buffer
+            dataBuffer.push_back(frame);
+        }
 
         //// EOF STUDENT ASSIGNMENT
         cout << "#1 : LOAD IMAGE INTO BUFFER done" << endl;
@@ -146,13 +156,12 @@ int main(int argc, const char *argv[])
         // for keypoint matching
         if (dataBuffer.size() > 1)
         {
-
             /* MATCH KEYPOINT DESCRIPTORS */
             // Create vector to store the descriptors match results
             vector<cv::DMatch> matches;
             string matcherType = "MAT_BF";        // MAT_BF, MAT_FLANN
-            string descriptorType = "DES_BINARY"; // DES_BINARY, DES_HOG
-            string selectorType = "SEL_NN";       // SEL_NN, SEL_KNN
+            string descriptorType = "DES_BINARY"; // DES_BINARY (i.e. for BRISK, ORB), DES_HOG (i.e. for SITF)
+            string selectorType = "SEL_NN";       // SEL_NN (select nearest neighbor), SEL_KNN (select nearest kth neighbor) 
 
             //// STUDENT ASSIGNMENT
             //// TASK MP.5 -> add FLANN matching in file matching2D.cpp
