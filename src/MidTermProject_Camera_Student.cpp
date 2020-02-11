@@ -108,10 +108,32 @@ int main(int argc, const char *argv[])
         // (i.e. inside the bounding rectangle)
         bool bFocusOnVehicle = true;
         // Rectangle which always encloses the directly preceding vehicle
-        cv::Rect vehicleRect(535, 180, 180, 150);
+        cv::Rect vehicleRect(535, 180, 180, 150); // arguments: [cx,cy,w,h]
         if (bFocusOnVehicle)
         {
-            // ...
+            for (auto it = keypoints.begin(); it < keypoints.end(); it++)
+            {
+                // Method 1: Remove keypoints that are outside the region of interest
+                // cv::KeyPoint curr_keypoint;
+                // curr_keypoint.pt = cv::Point2f((*it).pt.x, (*it).pt.y);
+                // int pt_x     = curr_keypoint.pt.x;
+                // int pt_y     = curr_keypoint.pt.y;
+                // int left_x   = vehicleRect.x;
+                // int right_x  = vehicleRect.x + vehicleRect.width;
+                // int top_y    = vehicleRect.y + vehicleRect.height;
+                // int bottom_y = vehicleRect.y;
+                // if (left_x > pt_x || pt_x > right_x || pt_y > top_y || pt_y < bottom_y)
+                // {
+                //     keypoints.erase(it);
+                // }
+
+                // Method 2: Remove keypoints that are outside the region of interest
+                if (!vehicleRect.contains(it->pt))
+                {
+                    keypoints.erase(it);
+                }
+            }
+            // std::cout << "Focus on vehicle keypoints = " << keypoints.size() << "\n";
         }
 
         //// EOF STUDENT ASSIGNMENT
