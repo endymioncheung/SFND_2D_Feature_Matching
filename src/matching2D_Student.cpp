@@ -15,39 +15,48 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
     {
         int normType = cv::NORM_HAMMING;
         matcher = cv::BFMatcher::create(normType, crossCheck);
-        cout << "Brute-force matching";
+        cout << "Brute-force matching" << endl;
     }
     else if (matcherType.compare("MAT_FLANN") == 0)
     {
-        if (descSource.type() != CV_32F)
-        { 
-            // OpenCV bug workaround : convert binary descriptors to floating point 
-            // due to a bug in current OpenCV implementation
-            descSource.convertTo(descSource, CV_32F);
-            descRef.convertTo(descRef, CV_32F);
-        }
+        // OpenCV bug workaround : convert binary descriptors to floating point 
+        // due to a bug in current OpenCV implementatio
+        descSource.convertTo(descSource, CV_32F);
+        descRef.convertTo(descRef, CV_32F);
+        // if (descSource.type() != CV_32F)
+        // {
+        //     cout << "test" << endl;
+        //     cout << descSource.type() << endl;
+        //     // OpenCV bug workaround : convert binary descriptors to floating point 
+        //     // due to a bug in current OpenCV implementation
+        //     descSource.convertTo(descSource, CV_32F);
+        //     descRef.convertTo(descRef, CV_32F);
+        // }
         // FLANN matching
         matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
         // matcher = cv::FlannBasedMatcher::create();
-        cout << "FLANN matching";
+        cout << "FLANN matching" << endl;;
     } else {
         // Default to brute force if no matching matcher option is found
         int normType = cv::NORM_HAMMING;
         matcher = cv::BFMatcher::create(normType, crossCheck);
-        cout << "Brute-force matching";
+        cout << "Brute-force matching" << endl;
     }
 
     // Perform matching task
     if (selectorType.compare("SEL_NN") == 0)
     { 
         // Nearest neighbor (best match)
-        // Find the best match for each descriptor in desc
+        // Find the best match for each descriptor in descSource
+        double t = (double)cv::getTickCount();
         matcher->match(descSource, descRef, matches); 
+        t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+        cout << "(NN) with n=" << matches.size() << " matches in " << 1000 * t / 1.0 << " ms" << endl;
     }
     else if (selectorType.compare("SEL_KNN") == 0)
     { 
         // k nearest neighbors (k=2)
-        // for each key frame get the two best matches in the second key frame
+        // For each key frame get the two best matches in the second key frame
         double t = (double)cv::getTickCount();
         // k-nearest-neighbor matching with the two best matches
         vector<vector<cv::DMatch>> knn_matches;
@@ -68,7 +77,7 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
         }
         cout << "# keypoints removed = " << knn_matches.size() - matches.size() << endl;
         t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        cout << " (kNN) with n=" << matches.size() << " matches in " << 1000 * t / 1.0 << " ms" << endl;
+        cout << "(kNN) with n=" << matches.size() << " matches in " << 1000 * t / 1.0 << " ms" << endl;
     }
 }
 
@@ -91,7 +100,6 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
         int threshold = 30;        // FAST/AGAST detection threshold score.
         int octaves = 3;           // Detection octaves (use 0 to do single scale)
         float patternScale = 1.0f; // Apply this scale to the pattern used for sampling the neighbourhood of a keypoint.
-
         extractor = cv::BRISK::create(threshold, octaves, patternScale);
     } else if (descriptorType.compare("BRIEF") == 0) {
         // OpenCV docs: https://docs.opencv.org/3.4/d1/d93/classcv_1_1xfeatures2d_1_1BriefDescriptorExtractor.html
@@ -112,15 +120,15 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
         In Computer Vision (ICCV), 2011 IEEE International Conference on, pages 2564–2571. IEEE, 2011.
         */
 
-        int 	nfeatures = 500;    // The maximum number of features to retain
+        int 	nfeatures = 99999;    // The maximum number of features to retain
         float 	scaleFactor = 1.2f; // Pyramid decimation ratio, greater than 1. scaleFactor==2 means the classical pyramid, 
                                     // where each next level has 4x less pixels than the previous but such a big scale factor 
                                     // will degrade feature matching scores dramatically. On the other hand, too close to 1 
                                     // scale factor will mean that to cover certain scale range you will need more pyramid 
                                     // levels and so the speed will suffer.
-        int 	nlevels = 8;        // The number of pyramid levels. The smallest level will have linear size equal to 
+        int 	nlevels = 3;        // The number of pyramid levels. The smallest level will have linear size equal to 
                                     // input_image_linear_size/pow(scaleFactor, nlevels - firstLevel).
-        int 	edgeThreshold = 31; // The size of the border where the features are not detected. It should roughly match the patchSize parameter
+        int 	edgeThreshold = 30; // The size of the border where the features are not detected. It should roughly match the patchSize parameter
         int 	firstLevel = 0;     // The level of pyramid to put source image to. Previous layers are filled with upscaled source image
         int 	WTA_K = 2;          // The number of points that produce each element of the oriented BRIEF descriptor. 
                                     // The default value 2 means the BRIEF where we take a random point pair and compare their brightnesses, 
@@ -138,7 +146,7 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
                                                               // but it is a little faster to compute.
         int 	patchSize = 31;     // The size of the patch used by the oriented BRIEF descriptor. 
                                     // Of course, on smaller pyramid layers the perceived image area covered by a feature will be larger.
-        int 	fastThreshold = 20; // The fast threshold
+        int 	fastThreshold = 30; // The fast threshold
     
         extractor = cv::ORB::create(nfeatures,scaleFactor,nlevels,edgeThreshold,firstLevel,WTA_K,scoreType,patchSize,fastThreshold);
     } else if (descriptorType.compare("FREAK") == 0) {
@@ -146,7 +154,7 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
         FREAK: Fast Retina Keypoint
         OpenCV docs: https://docs.opencv.org/4.1.1/df/db4/classcv_1_1xfeatures2d_1_1FREAK.html
 
-        The algorithm propose a novel keypoint descriptor inspired by the human visual system and more precisely the retina, coined Fast Retina Key- point (FREAK). 
+        The algorithm propose a novel keypoint descriptor inspired by the human visual system and more precisely the retina, coined Fast Retina Key-point (FREAK). 
         A cascade of binary strings is computed by efficiently comparing image intensities over a retinal sampling pattern. 
         FREAKs are in general faster to compute with lower memory load and also more robust than SIFT, SURF or BRISK. 
         They are competitive alternatives to existing keypoints in particular for embedded applications.
@@ -158,7 +166,7 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
         bool 	orientationNormalized = true;   // Enable orientation normalization
         bool 	scaleNormalized = true;         // Enable scale normalization
         float 	patternScale = 22.0f;           // Scaling of the description pattern.
-        int 	nOctaves = 4;                   // Number of octaves covered by the detected keypoints
+        int 	nOctaves = 3;                   // Number of octaves covered by the detected keypoints
         
         extractor = cv::xfeatures2d::FREAK::create(orientationNormalized,scaleNormalized,patternScale,nOctaves);
     } else if (descriptorType.compare("AKAZE") == 0) {
@@ -184,7 +192,7 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
         int 	descriptor_size = 0;        // Size of the descriptor in bits. 0 -> Full size
         int 	descriptor_channels = 3;    // Number of channels in the descriptor (1, 2, 3)
         float 	threshold = 0.001f;         // Detector response threshold to accept point
-        int 	nOctaves = 4;               // Maximum octave evolution of the image
+        int 	nOctaves = 3;               // Maximum octave evolution of the image
         int 	nOctaveLayers = 4;          // Default number of sublevels per scale level
         cv::KAZE::DiffusivityType   diffusivity = cv::KAZE::DIFF_PM_G2;             // Diffusivity type
                                                                                     // cv::KAZE::DiffusivityType diffusivity: 
@@ -228,7 +236,47 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
     double t = (double)cv::getTickCount();
     extractor->compute(img, keypoints, descriptors);
     t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-    cout << descriptorType << " descriptor extraction in " << 1000 * t / 1.0 << " ms" << endl;
+    // cout << descriptorType << " descriptor extraction in " << 1000 * t / 1.0 << " ms" << endl;
+}
+
+// Detect keypoints in image using the traditional Shi-Thomasi detector
+void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis)
+{
+    // Compute detector parameters based on image size
+    int blockSize = 4;       // Size of an average block for computing a derivative covariation matrix over each pixel neighborhood
+    double maxOverlap = 0.0; // Max permissible overlap between two features in %
+    double minDistance = (1.0 - maxOverlap) * blockSize;
+    int maxCorners = img.rows * img.cols / max(1.0, minDistance); // Max num of keypoints
+
+    double qualityLevel = 0.01; // Minimal accepted quality of image corners
+    double k = 0.04;
+
+    // Apply corner detection
+    double t = (double)cv::getTickCount();
+    vector<cv::Point2f> corners;
+    cv::goodFeaturesToTrack(img, corners, maxCorners, qualityLevel, minDistance, cv::Mat(), blockSize, false, k);
+
+    // Add corners to result vector
+    for (auto it = corners.begin(); it != corners.end(); ++it)
+    {
+        cv::KeyPoint newKeyPoint;
+        newKeyPoint.pt = cv::Point2f((*it).x, (*it).y);
+        newKeyPoint.size = blockSize;
+        keypoints.push_back(newKeyPoint);
+    }
+    t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+    cout << "Shi-Tomasi detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
+
+    // Visualize results
+    if (bVis)
+    {
+        cv::Mat visImage = img.clone();
+        cv::drawKeypoints(img, keypoints, visImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        string windowName = "Shi-Tomasi Corner Detector Results";
+        cv::namedWindow(windowName, 6);
+        imshow(windowName, visImage);
+        cv::waitKey(0);
+    }
 }
 
 // Detect keypoints in image using the traditional Harris detector
@@ -311,46 +359,6 @@ void detKeypointsHarris(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis
         cv::Mat visImage = img.clone();
         cv::drawKeypoints(img, keypoints, visImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         string windowName = "Harris Corner Detector Results";
-        cv::namedWindow(windowName, 6);
-        imshow(windowName, visImage);
-        cv::waitKey(0);
-    }
-}
-
-// Detect keypoints in image using the traditional Shi-Thomasi detector
-void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis)
-{
-    // Compute detector parameters based on image size
-    int blockSize = 4;       // Size of an average block for computing a derivative covariation matrix over each pixel neighborhood
-    double maxOverlap = 0.0; // Max permissible overlap between two features in %
-    double minDistance = (1.0 - maxOverlap) * blockSize;
-    int maxCorners = img.rows * img.cols / max(1.0, minDistance); // Max num of keypoints
-
-    double qualityLevel = 0.01; // Minimal accepted quality of image corners
-    double k = 0.04;
-
-    // Apply corner detection
-    double t = (double)cv::getTickCount();
-    vector<cv::Point2f> corners;
-    cv::goodFeaturesToTrack(img, corners, maxCorners, qualityLevel, minDistance, cv::Mat(), blockSize, false, k);
-
-    // Add corners to result vector
-    for (auto it = corners.begin(); it != corners.end(); ++it)
-    {
-        cv::KeyPoint newKeyPoint;
-        newKeyPoint.pt = cv::Point2f((*it).x, (*it).y);
-        newKeyPoint.size = blockSize;
-        keypoints.push_back(newKeyPoint);
-    }
-    t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-    cout << "Shi-Tomasi detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
-
-    // Visualize results
-    if (bVis)
-    {
-        cv::Mat visImage = img.clone();
-        cv::drawKeypoints(img, keypoints, visImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-        string windowName = "Shi-Tomasi Corner Detector Results";
         cv::namedWindow(windowName, 6);
         imshow(windowName, visImage);
         cv::waitKey(0);
@@ -448,7 +456,7 @@ void detKeypointsORB(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis)
     //      FAST_SCORE is alternative value of the parameter that produces slightly less stable keypoints, 
     //      but it is a little faster to compute.
 
-    int 	nfeatures = 500;
+    int 	nfeatures = 99999;
     float 	scaleFactor = 1.2f;
     int 	nlevels = 8;
     int 	edgeThreshold = 31;
