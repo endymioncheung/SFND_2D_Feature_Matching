@@ -41,10 +41,13 @@ int main(int argc, const char *argv[])
     int dataBufferSize = 2;       // No. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer; // list of data frames which are held in memory at the same time
     bool bVis = false;            // visualize results
+    bool bSaveImg = false;        // save the keypoints detection and matching results
 
     /* MAIN LOOP OVER ALL IMAGES */
 
-    for (size_t imgIndex = 0; imgIndex <= imgEndIndex - imgStartIndex; imgIndex++)
+    vector<int> num_kPts, num_matches;
+    vector<float> t_detKeypoints, t_matches;
+    for (size_t imgIndex = 0; imgEndIndex <= 1; imgIndex++)
     {
         /* LOAD IMAGE INTO BUFFER */
 
@@ -89,8 +92,8 @@ int main(int argc, const char *argv[])
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
-        //// -> HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
-
+        //// -> SHITOMASI, HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
+        double t_detKeypoint = (double)cv::getTickCount();
         if (detectorType.compare("SHITOMASI") == 0)
         {
             detKeypointsShiTomasi(keypoints, imgGray, false);
@@ -99,6 +102,9 @@ int main(int argc, const char *argv[])
         {
             detKeypointsModern(keypoints, imgGray, detectorType, false);
         }
+        t_detKeypoint = ((double)cv::getTickCount() - t_detKeypoint) / cv::getTickFrequency();
+        num_kPts.push_back(keypoints.size());
+        t_detKeypoints.push_back(t_detKeypoint);
         //// EOF STUDENT ASSIGNMENT
 
         //// STUDENT ASSIGNMENT
@@ -163,8 +169,8 @@ int main(int argc, const char *argv[])
         //// -> BRIEF, ORB, FREAK, AKAZE, SIFT
 
         cv::Mat descriptors;
-        string descriptorType = "BRISK"; // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
-        descKeypoints((dataBuffer.end() - 1)->keypoints, (dataBuffer.end() - 1)->cameraImg, descriptors, descriptorType);
+        string descriptorAlgoType = "BRISK"; // BRISK, ORB, AKAZE, SIFT, BRIEF, FREAK
+        descKeypoints((dataBuffer.end() - 1)->keypoints, (dataBuffer.end() - 1)->cameraImg, descriptors, descriptorAlgoType);
         //// EOF STUDENT ASSIGNMENT
 
         // Push descriptors for current frame to end of data buffer
@@ -188,11 +194,13 @@ int main(int argc, const char *argv[])
             //// STUDENT ASSIGNMENT
             //// TASK MP.5 -> add FLANN matching in file matching2D.cpp
             //// TASK MP.6 -> add KNN match selection and perform descriptor distance ratio filtering with t=0.8 in file matching2D.cpp
-
+            double t_match = (double)cv::getTickCount();
             matchDescriptors((dataBuffer.end() - 2)->keypoints, (dataBuffer.end() - 1)->keypoints,
                              (dataBuffer.end() - 2)->descriptors, (dataBuffer.end() - 1)->descriptors,
                              matches, descriptorType, matcherType, selectorType);
-
+            t_match = ((double)cv::getTickCount() - t_match) / cv::getTickFrequency();
+            num_matches.push_back(matches.size());
+            t_matches.push_back(t_match);
             //// EOF STUDENT ASSIGNMENT
 
             // Store matches in current data frame
@@ -201,16 +209,16 @@ int main(int argc, const char *argv[])
             cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
 
             // Visualize matches between current and previous image
-            bVis = true;
-            if (bVis)
-            {
+            bVis = false;
+            
                 cv::Mat matchImg = ((dataBuffer.end() - 1)->cameraImg).clone();
                 cv::drawMatches((dataBuffer.end() - 2)->cameraImg, (dataBuffer.end() - 2)->keypoints,
                                 (dataBuffer.end() - 1)->cameraImg, (dataBuffer.end() - 1)->keypoints,
                                 matches, matchImg,
                                 cv::Scalar::all(-1), cv::Scalar::all(-1),
                                 vector<char>(), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-
+            if (bVis)
+            {
                 string windowName = "Matching keypoints between two camera images";
                 cv::namedWindow(windowName, 7);
                 cv::imshow(windowName, matchImg);
@@ -218,9 +226,55 @@ int main(int argc, const char *argv[])
                 cv::waitKey(0); // wait for key to be pressed
             }
             bVis = false;
+
+            bSaveImg = false;
+            if (bSaveImg)
+            {
+                string savedImgFullFilename = "../images/results/" + imgNumber.str() + "_" + detectorType + "_" + descriptorAlgoType + "_" + matcherType + "_" + descriptorType + "_" + selectorType + imgFileType;
+                cout << "Saving results to ... " << savedImgFullFilename << endl << endl;
+                cv::imwrite(savedImgFullFilename, matchImg);
+            }
         }
 
     } // EOF loop over all images
 
+    float avgkPts = 0.0f;
+    float sumkPts = 0.0f;
+    for (int i=0; i< num_kPts.size(); i++)
+    {
+        sumkPts += num_kPts[i];
+    }
+    avgkPts = sumkPts / num_kPts.size();
+    cout << "Average detected keypoints = " << int(avgkPts) << endl;
+
+    float avgMatches = 0.0f;
+    float sumMatches = 0.0f;
+    for (int i=0; i< num_matches.size(); i++)
+    {
+        sumMatches += num_matches[i];
+    }
+    avgMatches = sumMatches / num_matches.size();
+    cout << "Average matched keypoints = " << int(avgMatches) << endl;
+
+    float avg_t_detKeypoints = 0.0f;
+    float sum_t_detKeypoints = 0.0f;
+    for (int i=0; i< t_detKeypoints.size(); i++)
+    {
+        // cout << t_detKeypoints[i] << endl;
+        sum_t_detKeypoints += t_detKeypoints[i];
+    }
+    avg_t_detKeypoints = sum_t_detKeypoints / t_detKeypoints.size();
+    cout << "Average time to detect keypoints = " << (avg_t_detKeypoints * 1000 / 1.0) << " ms" << endl;
+
+    float avg_t_matches = 0.0f;
+    float sum_t_matches = 0.0f;
+    for (int i=0; i< t_matches.size(); i++)
+    {
+        // cout << t_matches[i] << endl;
+        sum_t_matches += t_matches[i];
+    }
+    avg_t_matches = sum_t_matches / t_matches.size();
+    cout << "Average time to extract keypoints = " << (avg_t_matches * 1000 / 1.0) << " ms" << endl;
+    // cout << avgkPts << " " << avgMatches << " " << avg_t_detKeypoints*1000 << " " << avg_t_matches*1000 << endl;
     return 0;
 }
