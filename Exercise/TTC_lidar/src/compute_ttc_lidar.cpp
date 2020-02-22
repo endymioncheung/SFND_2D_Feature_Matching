@@ -11,42 +11,32 @@ using namespace std;
 void computeTTCLidar(std::vector<LidarPoint> &lidarPointsPrev,
                      std::vector<LidarPoint> &lidarPointsCurr, double &TTC)
 {
-    // auxiliary variables
-    double dT = 0.1;        // time between two measurements in seconds
-    double laneWidth = 4.0; // assumed width of the ego lane
+    // Auxiliary variables
+    const double dT = 0.1;        // Time between two measurements [s]
+    const double laneWidth = 4.0; // Assumed road lane width [m]
 
-    // find closest distance to Lidar points within ego lane
-    double minXPrev = 1e9, minXCurr = 1e9;
+    // Find closest distance to 3D Lidar points within ego lane
+    // in the previous and current frame
+    double minXPrev = 1e9, minXCurr = 1e9;;
     for (auto it = lidarPointsPrev.begin(); it != lidarPointsPrev.end(); ++it)
-    {
         if (abs(it->y) <= laneWidth / 2.0)
-        { 
-            // Only considered the 3D point within ego lane
-            minXPrev = minXPrev > it->x ? it->x : minXPrev;
-        }
-    }
-
+            minXPrev = min(minXPrev,it->x);
     for (auto it = lidarPointsCurr.begin(); it != lidarPointsCurr.end(); ++it)
-    {
         if (abs(it->y) <= laneWidth / 2.0)
-        { 
-            // Only considered the 3D point within ego lane
-            minXCurr = minXCurr > it->x ? it->x : minXCurr;
-        }
-    }
+            minXCurr = min(minXCurr,it->x);
 
-    // compute TTC from both measurements
+    // Compute TTC from both measurements
     TTC = minXCurr * dT / (minXPrev - minXCurr);
 }
 
 int main()
 {
-
+    // Read Lidar points in the previous and current frame
     std::vector<LidarPoint> currLidarPts, prevLidarPts;
     readLidarPts("../dat/C22A5_currLidarPts.dat", currLidarPts);
     readLidarPts("../dat/C22A5_prevLidarPts.dat", prevLidarPts);
 
-
+    // Compute TTC (Time To Collision) based on Lidar points
     double ttc;
     computeTTCLidar(prevLidarPts, currLidarPts, ttc);
     cout << "ttc = " << ttc << "s" << endl;
